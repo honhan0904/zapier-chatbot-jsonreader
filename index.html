@@ -84,13 +84,13 @@
   <div id="root"></div>
   <script type="text/babel">
     function App() {
-      const [jsonData, setJsonData] = React.useState(null);
+      const [filesData, setFilesData] = React.useState([]);
       const [expanded, setExpanded] = React.useState(null);
       const [error, setError] = React.useState(null);
       const [searchTerm, setSearchTerm] = React.useState('');
 
-      // Handle file upload
-      const handleFileUpload = (event) => {
+      // Handle file upload for a specific index
+      const handleFileUpload = (index, event) => {
         const file = event.target.files[0];
         if (file && file.type === "application/json") {
           const reader = new FileReader();
@@ -98,18 +98,17 @@
             try {
               const data = JSON.parse(e.target.result);
               if (data.success && Array.isArray(data.data)) {
-                // Initialize completed field if not present
-                const updatedData = {
-                  ...data,
-                  data: data.data.map(conv => ({ ...conv, completed: conv.completed ?? false }))
-                };
-                setJsonData(updatedData);
+                setFilesData(prev => {
+                  const newFilesData = [...prev];
+                  newFilesData[index] = { fileName: file.name, data: data.data };
+                  return newFilesData;
+                });
                 setError(null);
               } else {
-                setError("Invalid JSON format. Please upload a valid JSON file.");
+                setError(`Invalid JSON format in ${file.name}`);
               }
             } catch (err) {
-              setError("Error parsing JSON file. Please ensure it's valid JSON.");
+              setError(`Error parsing ${file.name}: ${err.message}`);
             }
           };
           reader.readAsText(file);
@@ -117,6 +116,54 @@
           setError("Please upload a valid JSON file.");
         }
       };
+
+      // Clear file at a specific index
+      const clearFile = (index) => {
+        setFilesData(prev => {
+          const newFilesData = [...prev];
+          newFilesData[index] = null;
+          return newFilesData.filter(Boolean);
+        });
+      };
+
+      // Merge conversations for display and export
+      const mergedConversations = React.useMemo(() => {
+        const convMap = {};
+        // Process files in reverse order (File 2 has higher priority)
+        filesData.slice().reverse().forEach((fileData, fileIndex) => {
+          if (fileData && fileData.data) {
+            fileData.data.forEach(conv => {
+              const existing = convMap[conv.id];
+              if (!existing) {
+                // No existing conversation, add it
+                convMap[conv.id] = { ...conv, completed: conv.completed ?? false };
+              } else if (conv.completed) {
+                // If this conversation is completed, prioritize it
+                convMap[conv.id] = { ...conv, completed: true };
+              } else if (!existing.completed) {
+                // Neither is completed, keep the one from the higher-priority file
+                convMap[conv.id] = {
+                  ...conv,
+                  completed: conv.completed ?? false
+                };
+              }
+              // If existing is completed, keep it (higher-priority file wins if both completed)
+            });
+          }
+        });
+        // Order conversations: File 1 at bottom, File 2 higher up
+        const orderedConversations = [];
+        filesData.slice().reverse().forEach(fileData => {
+          if (fileData && fileData.data) {
+            fileData.data.forEach(conv => {
+              if (convMap[conv.id] && !orderedConversations.some(c => c.id === conv.id)) {
+                orderedConversations.push(convMap[conv.id]);
+              }
+            });
+          }
+        });
+        return orderedConversations;
+      }, [filesData]);
 
       // Handle search input
       const handleSearch = (event) => {
@@ -130,23 +177,33 @@
 
       // Toggle completion status
       const toggleCompletion = (id) => {
-        setJsonData(prevData => ({
-          ...prevData,
-          data: prevData.data.map(conv =>
-            conv.id === id ? { ...conv, completed: !conv.completed } : conv
-          )
-        }));
+        setFilesData(prev => {
+          const newFilesData = prev.map(fileData => {
+            if (!fileData || !fileData.data) return fileData;
+            return {
+              ...fileData,
+              data: fileData.data.map(conv =>
+                conv.id === id ? { ...conv, completed: !conv.completed } : conv
+              )
+            };
+          });
+          return newFilesData;
+        });
       };
 
-      // Export JSON
+      // Export merged JSON
       const exportJson = () => {
-        if (!jsonData) return;
+        if (!mergedConversations.length) return;
+        const jsonData = {
+          success: true,
+          data: mergedConversations
+        };
         const dataStr = JSON.stringify(jsonData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'updated_conversations.json';
+        link.download = `merged_conversations_${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -167,13 +224,11 @@
       };
 
       // Filter conversations based on search term
-      const filteredConversations = jsonData && jsonData.success
-        ? jsonData.data.filter((conversation) =>
-            conversation.messages.some((message) =>
-              message.content.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-          )
-        : [];
+      const filteredConversations = mergedConversations.filter((conversation) =>
+        conversation.messages.some((message) =>
+          message.content.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
 
       // Format date for Vietnamese locale
       const formatDate = (dateString) => {
@@ -193,43 +248,64 @@
         <div className="container mx-auto p-6 max-w-4xl">
           <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">An Cuong Chatbot Conversations</h1>
           
-          {/* File Upload, Search, and Export */}
+          {/* File Uploads, Search, and Export */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="neumorphic p-4">
-              <label className="block text-lg font-semibold mb-2 text-gray-700">Upload JSON File</label>
+              <label className="block text-lg font-semibold mb-2 text-gray-700">Upload File 1</label>
               <input
                 type="file"
                 accept=".json"
-                onChange={handleFileUpload}
+                onChange={(e) => handleFileUpload(0, e)}
                 className="neumorphic-input block w-full p-3 text-sm text-gray-600"
               />
-              {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+              {filesData[0] && (
+                <div className="flex items-center mt-2">
+                  <p className="text-sm text-gray-600 truncate">File 1: {filesData[0].fileName}</p>
+                  <button
+                    onClick={() => clearFile(0)}
+                    className="ml-2 text-red-500 text-sm hover:text-red-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
             <div className="neumorphic p-4">
-              <label className="block text-lg font-semibold mb-2 text-gray-700">Search Conversations</label>
+              <label className="block text-lg font-semibold mb-2 text-gray-700">Upload File 2</label>
               <input
-                type="text"
-                placeholder="Enter keyword..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="neumorphic-input w-full p-3 text-sm text-gray-600 focus:outline-none"
+                type="file"
+                accept=".json"
+                onChange={(e) => handleFileUpload(1, e)}
+                className="neumorphic-input block w-full p-3 text-sm text-gray-600"
               />
+              {filesData[1] && (
+                <div className="flex items-center mt-2">
+                  <p className="text-sm text-gray-600 truncate">File 2: {filesData[1].fileName}</p>
+                  <button
+                    onClick={() => clearFile(1)}
+                    className="ml-2 text-red-500 text-sm hover:text-red-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
             <div className="neumorphic p-4 flex items-end">
               <button
                 onClick={exportJson}
-                disabled={!jsonData}
+                disabled={!mergedConversations.length}
                 className={`neumorphic-button w-full p-3 text-sm font-semibold text-gray-700 ${
-                  !jsonData ? 'opacity-50 cursor-not-allowed' : 'hover:text-gray-800'
+                  !mergedConversations.length ? 'opacity-50 cursor-not-allowed' : 'hover:text-gray-800'
                 }`}
               >
-                Export JSON
+                Export Merged JSON
               </button>
             </div>
           </div>
+          {error && <p className="text-red-500 mb-4 text-sm text-center">{error}</p>}
 
           {/* Conversations List */}
-          {jsonData && jsonData.success && filteredConversations.length > 0 ? (
+          {mergedConversations.length > 0 ? (
             filteredConversations.map((conversation) => (
               <div key={conversation.id} className="mb-6 neumorphic conversation-card rounded-xl">
                 <div
@@ -282,7 +358,7 @@
             ))
           ) : (
             <p className="text-center text-gray-500 text-lg">
-              {jsonData && searchTerm ? "No conversations match your search." : jsonData ? "No conversations found." : "Please upload a JSON file to view conversations."}
+              {filesData.length > 0 && searchTerm ? "No conversations match your search." : filesData.length > 0 ? "No conversations found." : "Please upload JSON files to view conversations."}
             </p>
           )}
         </div>
