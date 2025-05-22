@@ -1,158 +1,19 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>An Cuong Chatbot Conversations - JSON Reader</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
-  <style>
-    .neumorphic {
-      background: #f1f5f9;
-      box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.1), -6px -6px 12px rgba(255, 255, 255, 0.8);
-      border-radius: 16px;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-    }
-    .neumorphic-input {
-      background: #f1f5f9;
-      box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
-      border: none;
-      border-radius: 10px;
-      transition: all 0.2s ease;
-    }
-    .neumorphic-input:focus {
-      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.8);
-      outline: none;
-      ring: 2px solid #60a5fa;
-    }
-    .neumorphic-button {
-      background: linear-gradient(145deg, #60a5fa, #3b82f6);
-      box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15), -4px -4px 8px rgba(255, 255, 255, 0.8);
-      border-radius: 10px;
-      color: white;
-      transition: all 0.2s ease;
-    }
-    .neumorphic-button:hover {
-      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.5);
-      transform: translateY(-1px);
-    }
-    .neumorphic-button:disabled {
-      background: #d1d5db;
-      cursor: not-allowed;
-    }
-    .conversation-card {
-      transition: all 0.3s ease;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-    .conversation-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.15), -8px -8px 16px rgba(255, 255, 255, 0.9);
-    }
-    .highlight {
-      background-color: #fef08a;
-      padding: 0 2px;
-      border-radius: 3px;
-    }
-    html {
-      scroll-behavior: smooth;
-    }
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #60a5fa;
-      border-radius: 10px;
-    }
-    .footer {
-      text-align: center;
-      padding: 1rem 0;
-      color: #4b5563;
-      font-size: 0.875rem;
-    }
-    .upload-container {
-      min-height: 120px;
-    }
-    .file-name {
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .title-gradient {
-      background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: gradientShift 4s ease infinite;
-    }
-    @keyframes gradientShift {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .title-shadow {
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.8);
-    }
-    @media (max-width: 640px) {
-      .title-gradient {
-        font-size: 1.5rem;
-      }
-      .upload-container {
-        min-height: 140px;
-      }
-    }
-  </style>
 </head>
 <body class="bg-gray-100 font-sans antialiased">
   <div id="root"></div>
-  <script type="text/javascript">
+  <script type="text/babel">
     var gk_isXlsx = false;
     var gk_xlsxFileLookup = {};
     var gk_fileData = {};
@@ -183,8 +44,7 @@
       }
       return gk_fileData[filename] || "";
     }
-  </script>
-  <script type="text/babel">
+
     function App() {
       const [filesData, setFilesData] = React.useState([]);
       const [expanded, setExpanded] = React.useState(null);
