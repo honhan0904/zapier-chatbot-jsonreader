@@ -1,6 +1,7 @@
 # JSON Reader for Zapier Interface Design
 
 ![GitHub Badge](https://img.shields.io/github/stars/honhan0904/zapier-chatbot-jsonreader?style=flat-square) ![GitHub Forks](https://img.shields.io/github/forks/honhan0904/zapier-chatbot-jsonreader?style=flat-square) ![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
+
 *Một giao diện đơn giản và tối ưu hóa để đọc, lọc và xử lý JSON cho chatbot Zapier.*
 
 ## Giới thiệu
