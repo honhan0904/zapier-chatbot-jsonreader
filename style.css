@@ -89,11 +89,45 @@ html {
 .title-shadow {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.8);
 }
+.loading {
+  color: #60a5fa;
+  font-style: italic;
+}
+.conversation-messages {
+  max-height: 500px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease;
+}
+.message {
+  margin-bottom: 1rem;
+}
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
 @media (max-width: 640px) {
   .title-gradient {
     font-size: 1.5rem;
   }
   .upload-container {
     min-height: 140px;
+  }
+  .conversation-messages {
+    max-height: 300px;
+  }
+  .message {
+    max-width: 90%;
+  }
+  .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
   }
 }
