@@ -1,4 +1,3 @@
-![Zapier JSON Reader](https://honhan0904.github.io/zapier-chatbot-jsonreader/)  
 *Một giao diện đơn giản và tối ưu hóa để đọc, lọc và xử lý JSON cho chatbot Zapier.*
 
 ## Giới thiệu
