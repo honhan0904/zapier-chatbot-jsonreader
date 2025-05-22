@@ -42,54 +42,157 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>An Cuong Chatbot Conversations</title>
+  <title>An Cuong Chatbot Conversations - JSON Reader</title>
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
   <style>
-    /* Neumorphism styles */
     .neumorphic {
-      background: #e0e7eb;
-      box-shadow: 8px 8px 16px #b3b9be, -8px -8px 16px #ffffff;
-      border-radius: 12px;
+      background: #f1f5f9;
+      box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.1), -6px -6px 12px rgba(255, 255, 255, 0.8);
+      border-radius: 16px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
     }
     .neumorphic-input {
-      background: #e0e7eb;
-      box-shadow: inset 4px 4px 8px #b3b9be, inset -4px -4px 8px #ffffff;
+      background: #f1f5f9;
+      box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+    .neumorphic-input:focus {
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+      outline: none;
+      ring: 2px solid #60a5fa;
     }
     .neumorphic-button {
-      background: linear-gradient(145deg, #f0f6fa, #d0d7db);
-      box-shadow: 4px 4px 8px #b3b9be, -4px -4px 8px #ffffff;
-      border-radius: 8px;
+      background: linear-gradient(145deg, #60a5fa, #3b82f6);
+      box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15), -4px -4px 8px rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      color: white;
+      transition: all 0.2s ease;
     }
     .neumorphic-button:hover {
-      box-shadow: inset 2px 2px 4px #b3b9be, inset -2px -2px 4px #ffffff;
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), inset -2px -2px 4px rgba(255, 255, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    .neumorphic-button:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
     }
     .conversation-card {
       transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
     }
     .conversation-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 10px 10px 20px #b3b9be, -10px -10px 20px #ffffff;
+      transform: translateY(-3px);
+      box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.15), -8px -8px 16px rgba(255, 255, 255, 0.9);
     }
     .highlight {
-      background-color: #fef08a; /* Yellow highlight for search terms */
+      background-color: #fef08a;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #60a5fa;
+      border-radius: 10px;
+    }
+    .footer {
+      text-align: center;
+      padding: 1rem 0;
+      color: #4b5563;
+      font-size: 0.875rem;
+    }
+    .upload-container {
+      min-height: 120px;
+    }
+    .file-name {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .title-gradient {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 4s ease infinite;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .title-shadow {
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2), -2px -2px 4px rgba(255, 255, 255, 0.8);
+    }
+    @media (max-width: 640px) {
+      .title-gradient {
+        font-size: 1.5rem;
+      }
+      .upload-container {
+        min-height: 140px;
+      }
     }
   </style>
 </head>
-<body class="bg-gray-200 font-sans">
+<body class="bg-gray-100 font-sans antialiased">
   <div id="root"></div>
+  <script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+  </script>
   <script type="text/babel">
     function App() {
       const [filesData, setFilesData] = React.useState([]);
       const [expanded, setExpanded] = React.useState(null);
       const [error, setError] = React.useState(null);
       const [searchTerm, setSearchTerm] = React.useState('');
+      const [startDateTime, setStartDateTime] = React.useState(null);
+      const [endDateTime, setEndDateTime] = React.useState(null);
 
-      // Handle file upload for a specific index
       const handleFileUpload = (index, event) => {
         const file = event.target.files[0];
         if (file && file.type === "application/json") {
@@ -117,7 +220,6 @@
         }
       };
 
-      // Clear file at a specific index
       const clearFile = (index) => {
         setFilesData(prev => {
           const newFilesData = [...prev];
@@ -126,32 +228,44 @@
         });
       };
 
-      // Merge conversations for display and export
+      const toggleSelectAll = () => {
+        setFilesData(prev => {
+          const filteredIds = new Set(filteredConversations.map(conv => conv.id));
+          const allCompleted = filteredConversations.every(conv => conv.completed);
+          return prev.map(fileData => {
+            if (!fileData || !fileData.data) return fileData;
+            return {
+              ...fileData,
+              data: fileData.data.map(conv => {
+                if (filteredIds.has(conv.id)) {
+                  return { ...conv, completed: !allCompleted };
+                }
+                return conv;
+              })
+            };
+          });
+        });
+      };
+
       const mergedConversations = React.useMemo(() => {
         const convMap = {};
-        // Process files in reverse order (File 2 has higher priority)
         filesData.slice().reverse().forEach((fileData, fileIndex) => {
           if (fileData && fileData.data) {
             fileData.data.forEach(conv => {
               const existing = convMap[conv.id];
               if (!existing) {
-                // No existing conversation, add it
                 convMap[conv.id] = { ...conv, completed: conv.completed ?? false };
               } else if (conv.completed) {
-                // If this conversation is completed, prioritize it
                 convMap[conv.id] = { ...conv, completed: true };
               } else if (!existing.completed) {
-                // Neither is completed, keep the one from the higher-priority file
                 convMap[conv.id] = {
                   ...conv,
                   completed: conv.completed ?? false
                 };
               }
-              // If existing is completed, keep it (higher-priority file wins if both completed)
             });
           }
         });
-        // Order conversations: File 1 at bottom, File 2 higher up
         const orderedConversations = [];
         filesData.slice().reverse().forEach(fileData => {
           if (fileData && fileData.data) {
@@ -165,17 +279,14 @@
         return orderedConversations;
       }, [filesData]);
 
-      // Handle search input
       const handleSearch = (event) => {
         setSearchTerm(event.target.value);
       };
 
-      // Toggle conversation visibility
       const toggleConversation = (id) => {
         setExpanded(expanded === id ? null : id);
       };
 
-      // Toggle completion status
       const toggleCompletion = (id) => {
         setFilesData(prev => {
           const newFilesData = prev.map(fileData => {
@@ -191,7 +302,6 @@
         });
       };
 
-      // Export merged JSON
       const exportJson = () => {
         if (!mergedConversations.length) return;
         const jsonData = {
@@ -210,7 +320,6 @@
         URL.revokeObjectURL(url);
       };
 
-      // Highlight search terms in text
       const highlightText = (text, term) => {
         if (!term) return text;
         const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -223,14 +332,25 @@
         );
       };
 
-      // Filter conversations based on search term
-      const filteredConversations = mergedConversations.filter((conversation) =>
-        conversation.messages.some((message) =>
+      const filteredConversations = mergedConversations.filter((conversation) => {
+        if (!conversation) return false;
+        const matchesSearch = conversation.messages?.some((message) =>
           message.content.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
+        );
+        if (!startDateTime && !endDateTime) return matchesSearch;
+        const convDate = new Date(conversation.createdAt);
+        const start = startDateTime ? new Date(startDateTime) : null;
+        const end = endDateTime ? new Date(endDateTime) : null;
+        if (start && end) {
+          return matchesSearch && convDate >= start && convDate <= end;
+        } else if (start) {
+          return matchesSearch && convDate >= start;
+        } else if (end) {
+          return matchesSearch && convDate <= end;
+        }
+        return matchesSearch;
+      });
 
-      // Format date for Vietnamese locale
       const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleString('vi-VN', {
@@ -244,128 +364,197 @@
         });
       };
 
+      const handleDateTimeChange = (type, value) => {
+        if (type === 'start') {
+          setStartDateTime(value);
+        } else {
+          setEndDateTime(value);
+        }
+      };
+
+      const clearDateTimeFilter = () => {
+        setStartDateTime(null);
+        setEndDateTime(null);
+      };
+
       return (
-        <div className="container mx-auto p-6 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">An Cuong Chatbot Conversations</h1>
-          
-          {/* File Uploads, Search, and Export */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="neumorphic p-4">
-              <label className="block text-lg font-semibold mb-2 text-gray-700">Upload File 1</label>
+        <div className="container mx-auto p-6 max-w-6xl">
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-12 title-gradient title-shadow tracking-tight animate-pulse">
+            An Cuong Chatbot Conversations - JSON Reader
+          </h1>
+
+          <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="neumorphic p-6 hover:shadow-lg transition-shadow">
+              <label className="block text-base font-medium mb-2 text-gray-800">Search Conversations</label>
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="neumorphic-input w-full p-3 text-sm text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div className="neumorphic p-6 hover:shadow-lg transition-shadow">
+              <label className="block text-base font-medium mb-2 text-gray-800">Start Date & Time</label>
+              <input
+                type="datetime-local"
+                value={startDateTime || ''}
+                onChange={(e) => handleDateTimeChange('start', e.target.value)}
+                className="neumorphic-input w-full p-3 text-sm text-gray-700"
+              />
+            </div>
+            <div className="neumorphic p-6 hover:shadow-lg transition-shadow">
+              <label className="block text-base font-medium mb-2 text-gray-800">End Date & Time</label>
+              <input
+                type="datetime-local"
+                value={endDateTime || ''}
+                onChange={(e) => handleDateTimeChange('end', e.target.value)}
+                className="neumorphic-input w-full p-3 text-sm text-gray-700"
+              />
+              {(startDateTime || endDateTime) && (
+                <button
+                  onClick={clearDateTimeFilter}
+                  className="mt-3 text-sm text-red-600 hover:text-red-800 transition-colors"
+                >
+                  Clear DateTime Filter
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="neumorphic p-6 bg-white/50 upload-container hover:shadow-lg transition-shadow">
+              <label className="block text-base font-medium mb-2 text-gray-800">Upload File 1</label>
               <input
                 type="file"
                 accept=".json"
                 onChange={(e) => handleFileUpload(0, e)}
-                className="neumorphic-input block w-full p-3 text-sm text-gray-600"
+                className="neumorphic-input block w-full p-3 text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
               />
               {filesData[0] && (
-                <div className="flex items-center mt-2">
-                  <p className="text-sm text-gray-600 truncate">File 1: {filesData[0].fileName}</p>
+                <div className="flex items-center mt-3">
+                  <p className="text-sm text-gray-600 file-name">File 1: {filesData[0].fileName}</p>
                   <button
                     onClick={() => clearFile(0)}
-                    className="ml-2 text-red-500 text-sm hover:text-red-700"
+                    className="ml-3 text-sm text-red-600 hover:text-red-800 transition-colors"
                   >
                     Clear
                   </button>
                 </div>
               )}
             </div>
-            <div className="neumorphic p-4">
-              <label className="block text-lg font-semibold mb-2 text-gray-700">Upload File 2</label>
+            <div className="neumorphic p-6 bg-white/50 upload-container hover:shadow-lg transition-shadow">
+              <label className="block text-base font-medium mb-2 text-gray-800">Upload File 2</label>
               <input
                 type="file"
                 accept=".json"
                 onChange={(e) => handleFileUpload(1, e)}
-                className="neumorphic-input block w-full p-3 text-sm text-gray-600"
+                className="neumorphic-input block w-full p-3 text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
               />
               {filesData[1] && (
-                <div className="flex items-center mt-2">
-                  <p className="text-sm text-gray-600 truncate">File 2: {filesData[1].fileName}</p>
+                <div className="flex items-center mt-3">
+                  <p className="text-sm text-gray-600 file-name">File 2: {filesData[1].fileName}</p>
                   <button
                     onClick={() => clearFile(1)}
-                    className="ml-2 text-red-500 text-sm hover:text-red-700"
+                    className="ml-3 text-sm text-red-600 hover:text-red-800 transition-colors"
                   >
                     Clear
                   </button>
                 </div>
               )}
             </div>
-            <div className="neumorphic p-4 flex items-end">
+            <div className="neumorphic p-6 bg-white/50 flex flex-col space-y-4 hover:shadow-lg transition-shadow">
+              <button
+                onClick={toggleSelectAll}
+                disabled={!mergedConversations.length}
+                className={`neumorphic-button w-full p-3 text-sm font-medium transition-all ${
+                  !mergedConversations.length ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
+                }`}
+              >
+                {mergedConversations.length && filteredConversations.every(conv => conv.completed) ? 'Deselect Filtered' : 'Select Filtered'}
+              </button>
               <button
                 onClick={exportJson}
                 disabled={!mergedConversations.length}
-                className={`neumorphic-button w-full p-3 text-sm font-semibold text-gray-700 ${
-                  !mergedConversations.length ? 'opacity-50 cursor-not-allowed' : 'hover:text-gray-800'
+                className={`neumorphic-button w-full p-3 text-sm font-medium transition-all ${
+                  !mergedConversations.length ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
                 }`}
               >
                 Export Merged JSON
               </button>
             </div>
           </div>
-          {error && <p className="text-red-500 mb-4 text-sm text-center">{error}</p>}
-
-          {/* Conversations List */}
-          {mergedConversations.length > 0 ? (
-            filteredConversations.map((conversation) => (
-              <div key={conversation.id} className="mb-6 neumorphic conversation-card rounded-xl">
-                <div
-                  className="p-5 cursor-pointer flex justify-between items-center"
-                  onClick={() => toggleConversation(conversation.id)}
-                >
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="checkbox"
-                      checked={conversation.completed}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        toggleCompletion(conversation.id);
-                      }}
-                      className="h-5 w-5 text-blue-600"
-                    />
-                    <h2 className="text-xl font-semibold text-gray-800">Conversation ID: {conversation.id}</h2>
-                  </div>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <span>Created: {formatDate(conversation.createdAt)}</span>
-                    <span>Updated: {formatDate(conversation.updatedAt)}</span>
-                    <svg
-                      className={`w-5 h-5 transform transition-transform ${expanded === conversation.id ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-                {expanded === conversation.id && (
-                  <div className="p-5 border-t border-gray-200">
-                    {conversation.messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`mb-3 p-4 rounded-lg ${
-                          message.role === 'assistant' ? 'bg-blue-50' : 'bg-green-50'
-                        }`}
-                      >
-                        <p className="font-bold text-gray-800">{message.role === 'assistant' ? 'Assistant' : 'User'}</p>
-                        <p className="whitespace-pre-wrap text-gray-700">
-                          {highlightText(message.content, searchTerm)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-gray-500 text-lg">
-              {filesData.length > 0 && searchTerm ? "No conversations match your search." : filesData.length > 0 ? "No conversations found." : "Please upload JSON files to view conversations."}
+          {error && (
+            <p className="text-red-600 mb-6 text-sm text-center bg-red-50 p-3 rounded-lg">
+              {error}
             </p>
           )}
+
+          <div className="mb-12">
+            {mergedConversations.length > 0 ? (
+              filteredConversations.map((conversation) => (
+                <div key={conversation.id} className="mb-8 neumorphic conversation-card rounded-xl bg-white/50 hover:shadow-lg transition-shadow">
+                  <div
+                    className="p-5 cursor-pointer flex justify-between items-center bg-gradient-to-r from-gray-50 to-gray-100"
+                    onClick={() => toggleConversation(conversation.id)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="checkbox"
+                        checked={conversation.completed}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleCompletion(conversation.id);
+                        }}
+                        className="h-5 w-5 text-blue-600 rounded focus:ring-blue-300"
+                      />
+                      <h2 className="text-lg font-semibold text-gray-900">Conversation ID: {conversation.id}</h2>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <span>Created: {formatDate(conversation.createdAt)}</span>
+                      <span>Updated: {formatDate(conversation.updatedAt)}</span>
+                      <svg
+                        className={`w-5 h-5 transform transition-transform ${expanded === conversation.id ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  {expanded === conversation.id && (
+                    <div className="p-5 border-t border-gray-200 bg-white">
+                      {conversation.messages.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`mb-4 p-4 rounded-lg ${
+                            message.role === 'assistant' ? 'bg-blue-50' : 'bg-green-50'
+                          } shadow-sm`}
+                        >
+                          <p className="font-medium text-gray-800">{message.role === 'assistant' ? 'Assistant' : 'User'}</p>
+                          <p className="mt-1 text-gray-700 whitespace-pre-wrap">
+                            {highlightText(message.content, searchTerm)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 text-base bg-gray-50 p-4 rounded-lg">
+                {filesData.length > 0 && (searchTerm || startDateTime || endDateTime) ? "No conversations match your filters." : filesData.length > 0 ? "No conversations found." : "Please upload JSON files to view conversations."}
+              </p>
+            )}
+          </div>
+          <div className="footer">
+            © 2025 An Cường - Hồ Nhân
+          </div>
         </div>
       );
     }
 
-    // Render the React app
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
