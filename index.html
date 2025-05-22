@@ -82,7 +82,7 @@
         reader.onload = (e) => {
           try {
             const data = JSON.parse(e.target.result);
-            console.log("Parsed JSON:", data); // Debug
+            console.log("Parsed JSON:", data);
             if (!data.success) {
               setError(`Invalid JSON: Missing 'success' field in ${file.name}`);
             } else if (!Array.isArray(data.data)) {
@@ -91,7 +91,7 @@
               setFilesData(prev => {
                 const newFilesData = [...prev];
                 newFilesData[index] = { fileName: file.name, data: data.data };
-                console.log("Updated filesData:", newFilesData); // Debug
+                console.log("Updated filesData:", newFilesData);
                 return newFilesData;
               });
               setError(null);
@@ -159,7 +159,7 @@
             });
           }
         });
-        console.log("Merged conversations:", orderedConversations); // Debug
+        console.log("Merged conversations:", orderedConversations);
         return orderedConversations;
       }, [filesData]);
 
@@ -307,7 +307,7 @@
           </div>
 
           <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="neumorphic p-6 bg-white/50 upload-container hover:shadow-lg transition-shadow">
+            <div className="neumorphic p-6 bg-white upload-container hover:shadow-lg transition-shadow">
               <label className="block text-base font-medium mb-2 text-gray-800">Upload File 1</label>
               <input
                 type="file"
@@ -328,7 +328,7 @@
                 </div>
               )}
             </div>
-            <div className="neumorphic p-6 bg-white/50 upload-container hover:shadow-lg transition-shadow">
+            <div className="neumorphic p-6 bg-white upload-container hover:shadow-lg transition-shadow">
               <label className="block text-base font-medium mb-2 text-gray-800">Upload File 2</label>
               <input
                 type="file"
@@ -349,7 +349,7 @@
                 </div>
               )}
             </div>
-            <div className="neumorphic p-6 bg-white/50 flex flex-col space-y-4 hover:shadow-lg transition-shadow">
+            <div className="neumorphic p-6 bg-white flex flex-col space-y-4 hover:shadow-lg transition-shadow">
               <button
                 onClick={toggleSelectAll}
                 disabled={!mergedConversations.length}
@@ -380,8 +380,8 @@
             {isLoading && <p className="loading text-center text-gray-600 mb-4">Processing file...</p>}
             {mergedConversations.length > 0 ? (
               filteredConversations.map((conversation) => (
-                <div key={conversation.id} className="mb-8 neumorphic conversation-card rounded-xl bg-white/50 hover:shadow-lg transition-shadow">
-                  <div className="p-5 flex justify-between items-center bg-gradient-to-r from-gray-50 to-gray-100">
+                <div key={conversation.id} className="neumorphic conversation-card rounded-xl bg-white hover:shadow-lg transition-shadow">
+                  <div className="p-5 flex justify-between items-center bg-white conversation-header">
                     <div className="flex items-center space-x-4">
                       <input
                         type="checkbox"
